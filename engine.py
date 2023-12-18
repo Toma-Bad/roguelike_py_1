@@ -70,74 +70,49 @@ class EventHandler:
                 #print("what?")
                 event = self.ck_dict[key]
                 return event
+        else:
+            return None
     def register_event(self,ck_dict,key,event_type):
         ck_dict[key] = event_type
+
+def event_to_action(scenemap,entity,event):
+    if  isinstance(event,PlayerMoveEvent):
+        dest_floortile, dest_walltile, dest_entity = scenemap.check_position(entity.position + np.array(event.dir))
+        if dest_walltile["walkable"]:
+            if not dest_entity:
+                return MoveAction(entity,event.dir)
+            elif np.where(np.array([_d.hostile for _d in dest_entity]))[0].size > 0:
+                return AttackAction(entity,np.where(np.array([_d.hostile for _d in dest_entity]))[0][0])
+
+        else:
+            print("ow!")
+            return None
+    else:
+        return None
 
 class EntityAction: #need to make an action  factory too...
     def __init__(self,entity):
         self.entity = entity
-        self.actiontype = None
 
+class AttackAction(EntityAction):
+    def __init__(self,entity,other):
+        super().__init__(entity)
+        self.other = other
+    def resolve(self,**kwargs):
+        ...
 
-    @classmethod
-    def create_move_action(cls,entity,dir):
-        cl = cls(entity)
-        cl.actiontype = "move"
-        cl.dir = dir
-        return cl
-    def apply_action(self):
-        if self.actiontype == "move":
-            self.entity.position[0] += self.dir[0]
-            self.entity.position[1] += self.dir[1]
-            return True
-
-
-class MoveCommand:
-    def __init__(self,event):
-        self.event = event
-    def to_action(self,entity,scenemap):
-        dest_floortile,dest_walltile,dest_entity = scenemap.check_position(entity,self.event.dir)
-        if dest_walltile["walkable"]:
-            return EntityAction.create_move_action(entity,self.event.dir)
-        else:
-            print("ow!")
-            return None
-
-        
-        #if destination is hostile creature return attack action on target
-        #if it's NPC, return talk or move action to target
-        #if it's wall, return None
-        #if it's walkable place return move action to target
-        #if it's interactible barrier open action to target
-
-
-
-        #if _map[self.position[0] + event.dx, self.position[1] + event.dy]['walkable']:
-        #    self.position = self.position + np.array([event.dx, event.dy])
-        #    return True
-        #else:
-        #    print("ow!")
-        #    return False
-
-
-class EntityCommander:
-    def __call__(self,entity,map,commandfactory,event):
-        command = commandfactory.get_command_from(event)
-        action = command.to_action(entity,map)
-        return action
-
-
-
-class CommandFactory:
-    def get_command_from(self,event):
-        if isinstance(event,PlayerMoveEvent):
-            return MoveCommand(event)
-        if isinstance(event,PlayerAttackEvent):
-            return False
-            #return AttackCommand(event)
-        if isinstance(event,str):
-            if event == "QUIT":
-                QuitGame(event)
+class InterAction(EntityAction):
+    def __init__(self,entity,other):
+        super().__init__(entity)
+        self.other = other
+    def resolve(self,**kwargs):
+        ...
+class MoveAction(EntityAction):
+    def __init__(self,entity,direction):
+        super().__init__(entity)
+        self.direction = direction
+    def resolve(self):
+        self.entity.position += np.array(self.direction)
 
 
 
@@ -146,33 +121,12 @@ class CommandFactory:
 
 
 class Entity:
-    def __init__(self, position, gf_tile=None, name="", isplayer=True):
+    def __init__(self, position, gf_tile=None, name="", isplayer=True,hostile = False):
         self.position = np.array(position)
         self.gf_tile = np.array([[gf_tile, ], ], dtype=gf_tile_dt)
         self.name = name
         self.isplayer = isplayer
-    def __call__(self, *args, **kwargs):
-        if self.isplayer is True:
-            event = args[0]
-            _map = args[1]
-            if isinstance(event,PlayerMoveEvent):
-                return self._move(event,_map)
-            if isinstance(event, PlayerAttackEvent):
-                print("attack!")
-                return True
-            return False
-        if self.isplayer is False:
-            return self._ai_do(*args)
-    def _move(self,event,_map):
-        if _map[self.position[0] + event.dx, self.position[1] + event.dy]['walkable']:
-            self.position = self.position + np.array([event.dx, event.dy])
-            return True
-        else:
-            print("ow!")
-            return False
-
-    def _ai_do(self,_fov_map):
-        return True
+        self.hostile = hostile
 
 
 ck_dict = {blt.TK_UP: PlayerMoveEvent("MUP"),
@@ -190,8 +144,8 @@ class GameEngine:
         self.event_handler = ev_handler
         self.SceneMap = SceneMap
         self.Renderer = Render(self.SceneMap,self.SceneMap.object_list,self.SceneMap.entity_list)
-        self.commandfactory = CommandFactory()
-        #self._playerobject = entity_list[0]
+        self.command_queue = []
+
 
 
     def render_scene(self,map,entity_list):
@@ -208,11 +162,18 @@ class GameEngine:
             #print("A")
             event = self.event_handler.get_event()
             #print(event)
-            QuitGame(event)
-            if self.SceneMap._playerobject(event,self.SceneMap.WallMap.np_map):
+            action = event_to_action(self.SceneMap,self.SceneMap.player_object,event)
+            if action:
                 advance_turn = True
+                self.command_queue.append(action)
             else:
                 advance_turn = False
+            QuitGame(event)
+
+            while self.command_queue:
+                first_action = self.command_queue.pop(0)
+                first_action.resolve()
+
 
             if advance_turn is True:
                 turn_number += 1
@@ -223,14 +184,15 @@ class GameEngine:
 
             #self.render_scene(self.local_map,self.entity_list)
             blt.clear()
-            self.Renderer.compute_fov(self.SceneMap._playerobject.position)
+            self.Renderer.compute_fov(self.SceneMap.player_object.position)
             self.Renderer.render_scene()
             blt.refresh()
 
 class SceneMap:
-    def __init__(self,FloorMap = None, WallMap=None,entity_list = None,object_list = None):
+    def __init__(self,FloorMap = None, WallMap=None,entity_list = None,object_list = None,player_object = None):
         self.FloorMap = FloorMap
         self.WallMap = WallMap
+        self.player_object = player_object #is set with list!
         self.entity_list = entity_list
         self.object_list = object_list
 
@@ -243,23 +205,17 @@ class SceneMap:
         self._entity_list = e_list
         for _entity in e_list:
             if _entity.isplayer is True:
-                self._playerobject = _entity
-    def check_position(self,position : tuple([int,int])):
+                self.player_object = _entity
+    def check_position(self,position):
         x,y = position
-        entity_at_pos = [_e for _e in self.entity_list if _e.x == x and _e.y == y]
+        entity_at_pos = [_e for _e in self.entity_list if (_e.position == position).all()]
         return self.FloorMap.get_xy(x,y),self.WallMap.get_xy(x,y),entity_at_pos
 
 class Map:
     def __init__(self,np_map = None, layer = 0):
         self.np_map = np_map
         self.layer = layer
-    def get_xy(self,*args):
-        if isinstance(args,tuple):
-            x = args[0][1]
-            y = args[0][1]
-        else:
-            x = args[0]
-            y = args[1]
+    def get_xy(self,x,y):
         return self.np_map[x,y]
 
 
@@ -348,6 +304,7 @@ if __name__ == "__main__":
     object_list = [Entity((17, 9), name="Monster 1", gf_tile=gf_Tile("^", "blue", bgcolor="black"), isplayer=False),
                    Entity((10, 12), name="Monster 2", gf_tile=gf_Tile("$", "green", bgcolor="black"), isplayer=False)]
     scn_map = SceneMap(FloorMap=Map(np_map=soilmap, layer=0), WallMap=Map(np_map=map, layer=1),entity_list=entity_list,object_list=object_list)
+    print(scn_map.player_object)
     event_handler = EventHandler(ck_dict = ck_dict)
     game_engine = GameEngine(scn_map,event_handler)
     game_engine.main_loop()
