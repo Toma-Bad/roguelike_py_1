@@ -3,12 +3,12 @@ from types import SimpleNamespace
 
 
 class Scene:
-    def __init__(self):
+    def __init__(self,scene_width, scene_height):
         self.ids = dict()
         self.obj_positions = dict()
         self.obj_type = dict()
         self.obj_components = dict()
-
+        self.obj_loc_arr = np.empty((scene_width,scene_height),dtype=object)
     def spawn_object(self, base_object):
         ...
 #use sets instead of lists to hold all this crap
@@ -16,18 +16,18 @@ class Scene:
     def add_to_db(self, base_object):
         self.ids[base_object.id] = base_object
         if base_object.position in self.obj_positions:
-            self.obj_positions[base_object.position].append(base_object.id)
+            self.obj_positions[base_object.position].add(base_object.id)
         else:
-            self.obj_positions[base_object.position] = [base_object.id]
+            self.obj_positions[base_object.position] = {base_object.id}
         if type(base_object).__name__ in self.obj_type:
-            self.obj_type[type(base_object.__name__)].append(base_object.id)
+            self.obj_type[type(base_object.__name__)].add(base_object.id)
         else:
-            self.obj_type[type(base_object.__name__)] = [base_object.id]
+            self.obj_type[type(base_object.__name__)] = {base_object.id}
         for _c in base_object.component.__dict__:
             if _c in self.obj_components:
-                self.obj_components[_c].append(base_object.id)
+                self.obj_components[_c].add(base_object.id)
             else:
-                self.obj_components[_c] = [base_object.id]
+                self.obj_components[_c] = {base_object.id}
 
     def rem_fr_db(self, base_object):
         if base_object.id not in self.ids:
@@ -36,18 +36,18 @@ class Scene:
         else:
             del self.ids[base_object.id]
             if base_object.position in self.obj_positions:
-                if self.obj_positions[base_object.position] == [base_object.id]:
+                if self.obj_positions[base_object.position] == {base_object.id}:
                     del self.obj_positions[base_object.position]
                 elif base_object.id in self.obj_positions[base_object.position]:
                     self.obj_positions[base_object.position].remove(base_object.id)
             if type(base_object).__name__ in self.obj_type:
-                if self.obj_type[type(base_object).__name__] == [base_object.id]:
+                if self.obj_type[type(base_object).__name__] == {base_object.id}:
                     del self.obj_positions[base_object.position]
                 elif base_object.id in self.obj_type[type(base_object).__name__]:
                     self.obj_type[type(base_object).__name__].remove(base_object.id)
             for _c in base_object.component.__dict__:
                 if _c in self.obj_components:
-                    if self.obj_components[_c] == [base_object.id]:
+                    if self.obj_components[_c] == {base_object.id}:
                         del self.obj_components[_c]
                     elif base_object.id in self.obj_components[_c]:
                         self.obj_components[_c].remove(base_object.id)
