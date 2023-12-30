@@ -2,9 +2,11 @@ import json
 from types import SimpleNamespace
 import numpy as np
 class BaseObject:
-    def __init__(self, *components):
+    def __init__(self,position, *components):
         self.id = id(self)
+        self.position = position
         self.component = SimpleNamespace(**{type(_c).__name__:_c for _c in components})
+        
     def add_component(self, *components):
         self.component.__dict__.update({type(_c).__name__:_c for _c in components})
     def remove_component(self, component_name):
@@ -32,9 +34,9 @@ class Scene:
         else:
             self.obj_positions[base_object.position] = {base_object.id}
         if type(base_object).__name__ in self.obj_type:
-            self.obj_type[type(base_object.__name__)].add(base_object.id)
+            self.obj_type[type(base_object).__name__].add(base_object.id)
         else:
-            self.obj_type[type(base_object.__name__)] = {base_object.id}
+            self.obj_type[type(base_object).__name__] = {base_object.id}
         for _c in base_object.component.__dict__:
             if _c in self.obj_components:
                 self.obj_components[_c].add(base_object.id)
@@ -95,30 +97,30 @@ class BasicProps(BaseComponent):
     def __init__(self, **basic_properties):
         self.__dict__.update(basic_properties)
 
-class Inventory(BaseComponent):
+class Container(BaseComponent):
     #to do: add str representation for the items in dict
-    def __init__(self,**items):
+    def __init__(self,*items : BaseObject):
         self.storage = dict()
-        self.storage.update(items)
+        self.storage.update({_i.id : _i for _i in items})
         self.equipped = dict()
-        self.weight = sum([_i.weight for _i in self.storage.values()])
-    def set_equip_from_storage(self,item_name):
-        if item_name in self.storage and item_name not in self.equipped:
-            self.equipped[item_name] = self.storage[item_name]
-    def set_unequip(self,item_name):
-        if item_name in self.storage and item_name in self.equipped:
-            del self.equipped[item_name]
-    def add_items(self,**items):
-        self.storage.update(items)
-        self.weight += sum([_i.weight for _i in items.values()])
-    def remove_items(self,equipped = False,**items):
-        for _it_name in items:
-            if _it_name in self.storage:
-                del self.storage[_it_name]
+        self.weight = sum([_i.component.BasicProps.weight for _i in self.storage.values()])
+    def set_equip_from_storage(self,item):
+        if item.id in self.storage and item.id not in self.equipped:
+            self.equipped[item.id] = self.storage[item.id]
+    def set_unequip(self,item):
+        if item.id in self.storage and item.id in self.equipped:
+            del self.equipped[item.id]
+    def add_items(self,*items):
+        self.storage.update({_i.id : _i for _i in items})
+        self.weight += sum([_i.component.BasicProps.weight for _i in items])
+    def remove_items(self,equipped = False,*items):
+        for _i in items:
+            if _i.id in self.storage:
+                del self.storage[_i.id]
             if equipped:
-                if _it_name in self.equipped:
-                    del self.equipped[_it_name]
-        self.weight -= sum([_i.weight for _i in items.values()])
+                if _i.id in self.equipped:
+                    del self.equipped[_i.id]
+        self.weight -= sum([_i.component.BasicProps.weight for _i in items])
 
 
 
@@ -152,5 +154,19 @@ class Entities:
             Entities.positions[pos] = self.id
 
 if __name__ == "__main__":
-    ee1 = Entities("bob",(1,1),BasicProps(),Orc())
-    ee2 = Entities("jim",(2,1),BasicProps(strength=12),Orc())
+    #ee1 = Entities("bob",(1,1),BasicProps(),Orc())
+    #ee2 = Entities("jim",(2,1),BasicProps(strength=12),Orc())
+    ob1 = BaseObject((4,5),
+                     BasicProps(weight = 40,height = 100,strength = 15,dexterity = 20, constitution = 10),
+                     Orc())
+    ob2 = BaseObject((4, 6),
+                     BasicProps(weight=40, height=100, strength=17, dexterity=10, constitution=14),
+                     Orc())
+    axe = BaseObject((4, 5),
+                     BasicProps(weight=40, damage_min=1, damage_max=7))
+
+    sc = Scene(100,100)
+    sc.add_to_db(ob1)
+    sc.add_to_db(ob2)
+    sc.add_to_db(axe)
+    sc.add_comp_to_obj(ob1, Container(axe))
