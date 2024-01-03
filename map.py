@@ -1,3 +1,4 @@
+import numpy as np
 
 gf_tile_dt = np.dtype([("ch", np.uint32),
                        ("fg", np.uint32),

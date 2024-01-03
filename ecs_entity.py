@@ -3,6 +3,38 @@ from types import SimpleNamespace
 import numpy as np
 
 
+class SetDict(dict):
+    def add(self, key, value):
+        if key in self:
+            if value in self[key]:
+                return False
+            else:
+                self[key].add(value)
+                return 2
+        else:
+            self[key] = {value}
+            return 1
+
+    def remove(self, key, value):
+        if key in self:
+            if {value} == self[key]:
+                del self[key]
+                return 1
+            elif value in self[key]:
+                self[key].remove(value)
+                return 2
+            else:
+                return False
+
+    def move(self, old_key, new_key, value):
+        if old_key == new_key:
+            return 0
+        if self.remove(old_key, value) and self.add(new_key, value):
+            return 1
+        else:
+            raise Exception("Not able to move value in set_dict!")
+
+
 class BaseObject:
     def __init__(self, position, *components):
         self.id = id(self)
@@ -10,15 +42,13 @@ class BaseObject:
         self.component = SimpleNamespace(**{type(_c).__name__: _c for _c in components})
         self.contained_by = None
 
-    @property
     def _iter_contained_by(self):
         if self.contained_by is not None:
             yield self.contained_by
             yield from self.contained_by._iter_contained_by()
 
-    @property
     def contained_by_all(self):
-        return [_ for _ in self._iter_contained_by]
+        return [_ for _ in self._iter_contained_by()]+[None]
 
     def add_component(self, *components):
         self.component.__dict__.update({type(_c).__name__: _c for _c in components})
@@ -28,102 +58,6 @@ class BaseObject:
             self.component.__delattr__(component_name)
         except Exception as e:
             print(e)
-
-
-class Scene:
-    def __init__(self, scene_width, scene_height):
-        self.ids = dict()
-        self.obj_positions = dict()
-        self.obj_type = dict()
-        self.obj_components = dict()
-        self.obj_loc_arr = np.empty((scene_width, scene_height), dtype=object)
-
-    def spawn_object(self, base_object):
-        ...
-#use sets instead of lists to hold all this crap
-
-    def rem_obj_position(self, base_object: BaseObject):
-        if base_object.id not in self.ids:
-            raise Exception("object not in scene!")
-        if base_object.position in self.obj_positions:
-            if self.obj_positions[base_object.position] == {base_object}:
-                del self.obj_positions[base_object.position]
-            elif base_object in self.obj_positions[base_object.position]:
-                self.obj_positions[base_object.position].remove(base_object)
-
-    def add_obj_position(self, base_object: BaseObject, new_position):
-        if base_object.id not in self.ids:
-            raise Exception("object not in scene!")
-        if base_object.position != new_position:
-            base_object.position = new_position
-            if base_object.position in self.obj_positions:
-                self.obj_positions[base_object.position].add(base_object)
-            else:
-                self.obj_positions[base_object.position] = {base_object}
-
-    def update_obj_position(self, base_object: BaseObject, new_position):
-        self.rem_obj_position(base_object)
-        self.add_obj_position(base_object, new_position)
-
-        if "Container" in base_object.component.__dict__:
-            for _obj in base_object.component.Container.storage:
-                self.update_obj_position(_obj, new_position)
-
-    def add_to_db(self, base_object):
-        self.ids[base_object.id] = base_object
-        if base_object.position in self.obj_positions:
-            self.obj_positions[base_object.position].add(base_object)
-        else:
-            self.obj_positions[base_object.position] = {base_object}
-        if type(base_object).__name__ in self.obj_type:
-            self.obj_type[type(base_object).__name__].add(base_object)
-        else:
-            self.obj_type[type(base_object).__name__] = {base_object}
-        for _c in base_object.component.__dict__:
-            if _c in self.obj_components:
-                self.obj_components[_c].add(base_object)
-            else:
-                self.obj_components[_c] = {base_object}
-
-    def rem_fr_db(self, base_object):
-        if base_object.id not in self.ids:
-            print('object not in scene')
-            return 0
-        else:
-            del self.ids[base_object.id]
-            if base_object.position in self.obj_positions:
-                if self.obj_positions[base_object.position] == {base_object}:
-                    del self.obj_positions[base_object.position]
-                elif base_object in self.obj_positions[base_object.position]:
-                    self.obj_positions[base_object.position].remove(base_object)
-            if type(base_object).__name__ in self.obj_type:
-                if self.obj_type[type(base_object).__name__] == {base_object}:
-                    del self.obj_positions[base_object.position]
-                elif base_object in self.obj_type[type(base_object).__name__]:
-                    self.obj_type[type(base_object).__name__].remove(base_object)
-            for _c in base_object.component.__dict__:
-                if _c in self.obj_components:
-                    if self.obj_components[_c] == {base_object}:
-                        del self.obj_components[_c]
-                    elif base_object.id in self.obj_components[_c]:
-                        self.obj_components[_c].remove(base_object)
-
-    def rm_comp_from_obj(self, base_object: BaseObject, component_name: str):
-        if component_name in base_object.component.__dict__:
-            base_object.remove_component(component_name)
-            if component_name in self.obj_components:
-                if self.obj_components[component_name] == {base_object}:
-                    del self.obj_components[component_name]
-                elif base_object.id in self.obj_components[component_name]:
-                    self.obj_components[component_name].remove(base_object)
-
-    def add_comp_to_obj(self, base_object: BaseObject, component_instance):
-        base_object.add_component(component_instance)
-        component_name = type(component_instance).__name__
-        if component_name in self.obj_components:
-            self.obj_components[component_name].add(base_object)
-        else:
-            self.obj_components[component_name] = {base_object}
 
 
 class BaseComponent:
@@ -150,6 +84,94 @@ class Container(BaseComponent):
     @property
     def weight(self):
         return sum([_i.component.BasicProps.weight for _i in self.storage])
+
+
+class Scene:
+    def __init__(self, scene_width, scene_height):
+        self.ids = dict()
+        self.obj_positions = SetDict()
+        self.obj_type = SetDict()
+        self.obj_components = SetDict()
+        self.obj_loc_arr = np.empty((scene_width, scene_height), dtype=object)
+        self.obj_in_container = SetDict()
+
+    def update_obj_position(self, base_object: BaseObject, new_position):
+        old_position = base_object.position
+        self.obj_positions.move(old_position, new_position, base_object)
+        if "Container" in base_object.component.__dict__:
+            for _obj in base_object.component.Container.storage:
+                self.update_obj_position(_obj, new_position)
+                _obj.position = new_position
+        base_object.position = new_position
+
+    def add_obj(self, base_object: BaseObject):
+        self.ids[base_object.id] = base_object
+        self.obj_positions.add(base_object.position, base_object)
+        self.obj_type.add(type(base_object).__name__, base_object)
+        if base_object.contained_by:
+            self.obj_in_container.add(base_object.id, base_object.contained_by)
+        for _c in base_object.component.__dict__:
+            self.obj_components.add(_c, base_object)
+
+    def rem_obj(self, base_object: BaseObject):
+        if base_object.id not in self.ids:
+            print('object not in scene')
+            return 0
+        else:
+            del self.ids[base_object.id]
+        self.obj_positions.remove(base_object.position, base_object)
+        self.obj_type.remove(type(base_object).__name__, base_object)
+        if base_object.contained_by:
+            self.obj_in_container.remove(base_object.id, base_object.contained_by)
+        if "Container" in base_object.component.__dict__:
+            for _obj in base_object.component.Container.storage:
+                _obj.contained_by = _obj.contained_by_all()[1]
+        for _c in base_object.component.__dict__:
+            self.obj_components.remove(_c, base_object)
+
+    def add_component(self, base_object: BaseObject, *components: BaseComponent, **kcomponents: BaseComponent):
+        if base_object.id not in self.ids:
+            raise Exception(f"object not in scene!{base_object.id}")
+        base_object.component.__dict__.update({type(_c).__name__: _c for _c in components})
+        base_object.component.__dict__.update(kcomponents)
+        for _c in components:
+            self.obj_components.add(type(_c).__name__, base_object)
+        for _c in kcomponents:
+            self.obj_components.add(_c, kcomponents[_c])
+
+    def remove_component(self, base_object: BaseObject, *components, **kcomponents):
+        if base_object.id not in self.ids:
+            raise Exception(f"object not in scene!{base_object.id}")
+
+        base_object.component.__dict__.update(kcomponents)
+        for _c in components:
+            base_object.component.__delattr__(type(_c).__name__)
+            self.obj_components.remove(type(_c).__name__, base_object)
+        for _c in kcomponents:
+            base_object.component.__delattr__(_c)
+            self.obj_components.remove(_c, kcomponents[_c])
+    
+    def add_to_container(self, base_object_c: BaseObject, *base_objects: BaseObject):
+        if "Container" not in base_object_c.component.__dict__:
+            raise Exception(f"object {base_object_c} does not have a Container comp")
+        base_object_c.component.Container.storage.update(base_objects)
+        for base_object in base_objects:
+            base_object.contained_by = base_object_c
+            self.obj_in_container.add(base_object.id, base_object_c)
+
+    def remove_from_container(self, base_object_c: BaseObject, *base_objects: BaseObject,oneup_only = False):
+        if "Container" not in base_object_c.component.__dict__:
+            raise Exception(f"object {base_object_c} does not have a Container comp")
+        base_object_c.component.Container.storage.difference_update(base_objects)
+        for base_object in base_objects:
+            if oneup_only:
+                base_object.contained_by = base_object.contained_by_all()[1]
+            else:
+                base_object.contained_by = None
+            self.obj_in_container.remove(base_object.id, base_object_c)
+            
+        
+
 
 
 class Modifiers:
@@ -187,8 +209,8 @@ class Entities:
 
 
 if __name__ == "__main__":
-    #ee1 = Entities("bob",(1,1),BasicProps(),Orc())
-    #ee2 = Entities("jim",(2,1),BasicProps(strength=12),Orc())
+    #ee1 = Entities("bob", (1, 1), BasicProps(), Orc())
+    #ee2 = Entities("jim", (2, 1), BasicProps(strength=12), Orc())
     ob1 = BaseObject((4, 5),
                      BasicProps(weight=40, height=100, strength=15, dexterity=20, constitution=10),
                      Orc())
