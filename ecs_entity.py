@@ -3,6 +3,21 @@ from types import SimpleNamespace
 import numpy as np
 
 
+gf_tile_dt =  np.dtype([("ch", np.uint32),
+                       ("fg", '4B'),
+                       ("bg", '4B')]
+                      )
+
+tile_dt = np.dtype([("walkable", bool),
+                       ("transparent", bool),
+                       ("dark", bool),
+                       ("explored", bool),
+                       ("gf_tile", gf_tile_dt)])
+
+def Tile(*args):
+    return np.array(*args, dtype=tile_dt)
+def Sprite(*args):
+    return np.array(*args, dtype=gf_tile_dt)
 class SetDict(dict):
     def add(self, key, value):
         if key in self:
@@ -70,15 +85,35 @@ class BaseComponent:
             data_dict = json.load(fin)
         return cls(**data_dict)
 
+class TileComponent(BaseComponent):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.__dict__.update(kwargs)
+        self._keys = kwargs.keys()
+
+        self.sprite = Sprite(*[kwargs[_name] for _name in gf_tile_dt.names])
+        self.tile = Tile(*[kwargs[_name] for _name in tile_dt.names])
+
+    def __setattr__(self, key, value):
+        if key == '_keys':
+            super().__setattr__(key, value)
+        elif key in self._keys:
+            super().__setattr__(key,value)
+            self.sprite = Sprite(*[self.__dict__[_name] for _name in gf_tile_dt.names])
+            self.tile = Tile(*[self.__dict__[_name] for _name in tile_dt.names])
+        else:
+            super().__setattr__(key,value)
 
 class BasicProps(BaseComponent):
     def __init__(self, **basic_properties):
+        super().__init__()
         self.__dict__.update(basic_properties)
 
 
 class Container(BaseComponent):
 
     def __init__(self, *items: BaseObject):
+        super().__init__()
         self.storage = set(items)
 
     @property
