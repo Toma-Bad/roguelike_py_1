@@ -49,9 +49,18 @@ class SetDict(dict):
         else:
             raise Exception("Not able to move value in set_dict!")
 
+class BaseComponent:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    @classmethod
+    def load_from_file(cls, filename):
+        with open(filename) as fin:
+            data_dict = json.load(fin)
+        return cls(**data_dict)
 
 class BaseObject:
-    def __init__(self, position, *components):
+    def __init__(self, position, *components: BaseComponent):
         self.id = id(self)
         self.position = position
         self.component = SimpleNamespace(**{type(_c).__name__: _c for _c in components})
@@ -75,15 +84,6 @@ class BaseObject:
             print(e)
 
 
-class BaseComponent:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-    @classmethod
-    def load_from_file(cls, filename):
-        with open(filename) as fin:
-            data_dict = json.load(fin)
-        return cls(**data_dict)
 
 class TileComponent(BaseComponent):
     def __init__(self,**kwargs):
@@ -119,6 +119,25 @@ class Container(BaseComponent):
     @property
     def weight(self):
         return sum([_i.component.BasicProps.weight for _i in self.storage])
+
+class TileMap:
+    def __init__(self, width = 128, height = 128, layer = 0):
+        self.np_array = np.array((width, height), dtype=tile_dt)
+        self.layer = layer
+
+    def from_set(self,obj_set: set[BaseObject]):
+        for _o in obj_set:
+            self.np_array[_o.position] = _o.component.TileComponent.tile
+
+    def add_obj(self,obj: BaseObject):
+        self.np_array[obj.position] = obj.component.TileComponent.tile
+
+    def rem_obj(self,obj: BaseObject):
+        self.np_array[obj.position] = 0
+
+    def move_obj(self,obj: BaseObject):
+        self.rem_obj(obj)
+        self.add_obj(obj)
 
 
 class Scene:
