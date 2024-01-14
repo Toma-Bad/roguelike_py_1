@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 import numpy as np
 import copy
+from bearlibterminal import terminal as blt
 
 gf_tile_dt =  np.dtype([("ch", np.uint32),
                        ("fg", '4B'),
@@ -151,13 +152,14 @@ class TileMap:
     def rem_obj(self,obj: BaseObject):
         self.np_array[obj.position] = 0
 
-class RenderMap:
+class MapRenderer:
     def __init__(self,*tilemaps: TileMap):
         #the current maps update as the game runs
         #the render tilemaps update when seen
         #by the player only
         self.current_tilemaps = tilemaps
         self.render_tilemaps = copy.deepcopy(tilemaps)
+        self.render_layers = {_rt.layer: _rt for _rt in self.render_tilemaps}
         self._trans_map = np.zeros_like(tilemaps[0])
         self._fov_map = None
     @property
@@ -181,6 +183,18 @@ class RenderMap:
                                                                   _current_tilemap.np_array['explored'])
             _render_tilemap.np_array['explored'] = np.logical_or(fovmap,
                                                                    _render_tilemap.np_array['explored'])
+
+    def render(self):
+        for key in sorted(self.render_layers.keys()):
+            map_to_render = self.render_layers[key].np_array['gf_tile']
+            darkmap = np.where(map_to_render['dark'] == True)
+            map_to_render['fg'][darkmap] = map_to_render['gf_tile']['fg'][darkmap] // np.array([2,1,1,1])
+            map_to_render['bg'][darkmap] = map_to_render['gf_tile']['bg'][darkmap] // np.array([2, 1, 1, 1])
+            unexmap = np.where(map_to_render['explored'] == False)
+            map_to_render['fg'][unexmap] = map_to_render['gf_tile']['fg'][unexmap] * np.array([1, 0, 0, 0])
+            map_to_render['bg'][unexmap] = map_to_render['gf_tile']['bg'][unexmap] * np.array([1, 0, 0, 0])
+            blt.layer(key)
+            blt.put_np_array(0, 0, self.render_layers[key].np_array['gf_tile'], 'ch', 'fg', 'bg')
 
 
 
