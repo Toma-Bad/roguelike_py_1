@@ -1,7 +1,7 @@
 import json
 from types import SimpleNamespace
 import numpy as np
-
+import copy
 
 gf_tile_dt =  np.dtype([("ch", np.uint32),
                        ("fg", '4B'),
@@ -85,14 +85,12 @@ class BaseObject:
 
 
 
-class TileComponent(BaseComponent):
+class SpriteComponent(BaseComponent):
     def __init__(self,**kwargs):
         super().__init__()
         self.__dict__.update(kwargs)
         self._keys = kwargs.keys()
-
         self.sprite = Sprite(*[kwargs[_name] for _name in gf_tile_dt.names])
-        self.tile = Tile(*[kwargs[_name] for _name in tile_dt.names])
 
     def __setattr__(self, key, value):
         if key == '_keys':
@@ -100,6 +98,21 @@ class TileComponent(BaseComponent):
         elif key in self._keys:
             super().__setattr__(key,value)
             self.sprite = Sprite(*[self.__dict__[_name] for _name in gf_tile_dt.names])
+        else:
+            super().__setattr__(key,value)
+
+class TileComponent(BaseComponent):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.__dict__.update(kwargs)
+        self._keys = kwargs.keys()
+        self.tile = Tile(*[kwargs[_name] for _name in tile_dt.names])
+
+    def __setattr__(self, key, value):
+        if key == '_keys':
+            super().__setattr__(key, value)
+        elif key in self._keys:
+            super().__setattr__(key,value)
             self.tile = Tile(*[self.__dict__[_name] for _name in tile_dt.names])
         else:
             super().__setattr__(key,value)
@@ -122,22 +135,54 @@ class Container(BaseComponent):
 
 class TileMap:
     def __init__(self, width = 128, height = 128, layer = 0):
-        self.np_array = np.array((width, height), dtype=tile_dt)
+
+        self.np_array = np.zeros((width, height), dtype=tile_dt)
         self.layer = layer
 
-    def from_set(self,obj_set: set[BaseObject]):
-        for _o in obj_set:
-            self.np_array[_o.position] = _o.component.TileComponent.tile
-
+    def add_set(self,obj_set: set[BaseObject]):
+        for obj in obj_set:
+            self.add_obj(obj)
+    def rem_set(self,obj_set: set[BaseObject]):
+        for obj in obj_set:
+            self.rem_obj(obj)
     def add_obj(self,obj: BaseObject):
-        self.np_array[obj.position] = obj.component.TileComponent.tile
+        self.np_array[obj.position]['gf_tile'] = obj.component.SpriteComponent.sprite
 
     def rem_obj(self,obj: BaseObject):
         self.np_array[obj.position] = 0
 
-    def move_obj(self,obj: BaseObject):
-        self.rem_obj(obj)
-        self.add_obj(obj)
+class RenderMap:
+    def __init__(self,*tilemaps: TileMap):
+        #the current maps update as the game runs
+        #the render tilemaps update when seen
+        #by the player only
+        self.current_tilemaps = tilemaps
+        self.render_tilemaps = copy.deepcopy(tilemaps)
+        self._trans_map = np.zeros_like(tilemaps[0])
+        self._fov_map = None
+    @property
+    def trans_map(self):
+        self._trans_map = np.any([_tilemap.np_array['transparent'] for _tilemap in self.current_tilemaps],
+                                 axis = 0)
+        return self._trans_map
+
+    @property
+    def fov_map(self):
+        return self._fov_map
+
+    @fov_map.setter
+    def fov_map(self, fovmap):
+        self._fov_map = fovmap
+        for _current_tilemap,_render_tilemap in zip(self.current_tilemaps,self.render_tilemaps):
+            not_fovmap = np.logical_not(fovmap)
+            _current_tilemap.np_array['dark'] = not_fovmap
+            _render_tilemap.np_array[not_fovmap] = _current_tilemap.np_array[not_fovmap]
+            _current_tilemap.np_array['explored'] = np.logical_or(fovmap,
+                                                                  _current_tilemap.np_array['explored'])
+            _render_tilemap.np_array['explored'] = np.logical_or(fovmap,
+                                                                   _render_tilemap.np_array['explored'])
+
+
 
 
 class Scene:
