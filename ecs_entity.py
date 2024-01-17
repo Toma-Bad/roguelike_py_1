@@ -15,6 +15,27 @@ tile_dt = np.dtype([("walkable", bool),
                        ("explored", bool),
                        ("gf_tile", gf_tile_dt)])
 
+def multi_union(*args: set):
+    if args:
+        if len(args) > 1:
+            result = args[0].union(args[1:])
+        else:
+            result = args[0]
+    else:
+        result = None
+    return result
+
+def multi_intersect(*args: set):
+    if args:
+        if len(args) > 1:
+            result = args[0].intersection(args[1:])
+        else:
+            result = args[0]
+    else:
+        result = None
+    return result
+
+
 def Tile(*args):
     return np.array(*args, dtype=tile_dt)
 def Sprite(*args):
@@ -84,7 +105,17 @@ class BaseObject:
         except Exception as e:
             print(e)
 
+class BaseBlock(BaseObject):
+    def __init__(self,position,*components: BaseComponent):
+        super().__init__(position,*components)
 
+class BaseEntity(BaseObject):
+    def __init__(self,position,*components: BaseComponent):
+        super().__init__(position,*components)
+
+class BaseItem(BaseObject):
+    def __init__(self,position,*components: BaseComponent):
+        super().__init__(position,*components)
 
 class SpriteComponent(BaseComponent):
     def __init__(self,**kwargs):
@@ -123,9 +154,7 @@ class BasicProps(BaseComponent):
         super().__init__()
         self.__dict__.update(basic_properties)
 
-
 class Container(BaseComponent):
-
     def __init__(self, *items: BaseObject):
         super().__init__()
         self.storage = set(items)
@@ -282,10 +311,6 @@ class Scene:
             else:
                 base_object.contained_by = None
             self.obj_in_container.remove(base_object.id, base_object_c)
-            
-        
-
-
 
 class Modifiers:
     def __init__(self, **modifiers):
