@@ -81,6 +81,7 @@ class BaseComponent:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+
     @classmethod
     def load_from_file(cls, filename):
         with open(filename) as fin:
@@ -384,25 +385,16 @@ class Scene:
             self.obj_in_container.remove(base_object.id, base_object_c)
 
 
-class BaseModifier(dict):
-    def __init__(self, **properties: tuple[str,int|bool]):
-        super().__init__()
-        for key in properties:
-            self.__setattr__(key,properties[key])
+class BaseModifier(BaseComponent):
+    def __init__(self,name: str, target_component: BaseComponent, **target_properties: tuple[str,int|bool]):
+        super().__init__(name=name, target_component=target_component, target_properties=target_properties)
 
-class BaseCondition(BaseComponent):
-    def __init__(self, components: list[BaseComponent], modifiers: list[BaseModifier], name: str = None, turns: int = None):
-        super().__init__()
-        self.target_components = components
-        self.target_modifiers = modifiers
-        self.target_attr = SetDict()
-        self.name = name
-        for _mod,_com in zip(modifiers, components):
-            for _key in _mod:
-                self.target_attr.add(_mod[_key],[_mod[_key],_com])
-        if turns:
-            self.turns = turns
-            self.timer = Timer(duration=turns)
+
+
+class MultiComponent(BaseComponent):
+    def __init__(self, name: str, *components: BaseComponent):
+        super().__init__(name=name, components=set(components))
+
 
 
 class BasicTime:
@@ -412,7 +404,8 @@ class BasicTime:
         self.turn += 1
 
 class Timer(BaseComponent):
-    def __init__(self, duration = 3, basic_time: BasicTime = None):
+    def __init__(self, duration = 3,
+                 basic_time: BasicTime = None):
         super().__init__()
         self.basic_time = basic_time
         self.start_turn = basic_time.turn
@@ -423,10 +416,8 @@ class Timer(BaseComponent):
         return self.end_turn - self.basic_time.turn
 
     def isdone(self):
-        if self.counter > 0:
-            return False
-        else:
-            return True
+        return self.counter > 0
+
 
 
 
