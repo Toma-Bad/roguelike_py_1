@@ -14,5 +14,9 @@ class EventHandler:
                 return _event
         else:
             return None
-    def register_event(self,ck_dict,key,event_type):
-        ck_dict[key] = event_type
+
+
+def action_maker(event, target):
+    if isinstance(target, BaseEntity):
+        return Action(event, target)
+    if isinstance(target, )
