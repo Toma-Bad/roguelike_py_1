@@ -167,7 +167,38 @@ class TileComponent(BaseComponent):
 class BasicProps(BaseComponent):
     def __init__(self, **basic_properties):
         super().__init__()
-        self.__dict__.update(basic_properties)
+        self.value = basic_properties
+class BasicStats(BasicProps):
+    def __init__(self, hp=10, weight=100):
+        super().__init__(hp=hp, weight=weight)
+
+class BasicEntityStats(BasicProps):
+    def __init__(self, hp=10, weight=100, energy=100):
+        super().__init__(hp=hp,
+                         weight=weight,
+                         energy=energy)
+class BasicItemStats(BasicProps):
+    def __init__(self,hp=10, weight=10, value=10, status="ok"):
+        super().__init__(hp=hp,
+                         weight=weight,
+                         value=value,
+                         status=status)
+class EntityProps(BasicProps):
+    def __init__(self, strength=10, dexterity=10, intelligence=10, charisma=10, constitution=10):
+        super().__init__(strength=strength,
+                         dexterity=dexterity,
+                         intelligence=intelligence,
+                         charisma=charisma,
+                         constitution=constitution)
+class WeaponProps(BasicProps):
+    def __init__(self,damage = (1,5), damage_type = "", ranged_damage = None):
+        super().__init__(damage=damage,
+                         damage_type=damage_type,
+                         ranged_damage=ranged_damage)
+
+class BlockProps(BasicProps):
+    def __init__(self,material = ""):
+        super().__init__(material=material)
 
 class Movement(BaseComponent):
     def __init__(self, base_cost=100, **basic_properties):
