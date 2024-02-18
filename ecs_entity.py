@@ -215,12 +215,27 @@ class Container(BaseComponent):
         return sum([_i.component.BasicProps.weight for _i in self.storage])
 
 class BaseModifier(BaseComponent):
-    def __init__(self,name: str, target_component: BaseComponent, **target_properties: tuple[str,int|bool]):
-        super().__init__(name=name, target_component=target_component, target_properties=target_properties)
+    def __init__(self,name: str, target_component: BasicProps, target_properties: dict):
+        super().__init__(name=name, target_component=target_component)
+        self.target_properties = target_properties
 
 class MultiModifier(BaseComponent):
-    def __init__(self, name: str, *modifiers: BaseComponent):
+    def __init__(self, name: str, *modifiers: BaseModifier):
         super().__init__(name=name, modifiers=modifiers)
+
+class BodyPart(BaseComponent):
+    def __init__(self, name: str,
+                 attached_from: BaseComponent = None,
+                 attached_to: BaseComponent = None,
+                 can_equip: set = None,
+                 equipped_item : BaseItem = None):
+        self.name = name
+        self.attached_from = attached_from
+        self.attached_to = attached_to
+        self.can_equip = can_equip
+        self.equipped_item = equipped_item
+
+
 
 
 

@@ -1,5 +1,5 @@
 import numpy as np
-
+from ecs_entity import *
 
 
 class TileMap:

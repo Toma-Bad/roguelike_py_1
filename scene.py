@@ -1,3 +1,4 @@
+from map_new import *
 class Scene:
     def __init__(self, scene_width, scene_height):
         self.ids = dict()
@@ -5,7 +6,7 @@ class Scene:
         self.obj_type = SetDict()
         self.obj_components = SetDict()
         self.comp_timers = SetDict()
-        self.obj_loc_arr = np.empty((scene_width, scene_height), dtype=object)
+        #self.obj_loc_arr = np.empty((scene_width, scene_height), dtype=object)
         self.obj_in_container = SetDict()
         self.terrain_map = TileMap(scene_width, scene_height, layer=0)
         self.block_map = TileMap(scene_width, scene_height, layer=1)
