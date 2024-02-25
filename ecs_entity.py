@@ -96,6 +96,30 @@ class BaseObject:
         self.component = SimpleNamespace(**{type(_c).__name__: _c for _c in components})
         self.contained_by = None
 
+    def get_base_to_hit(self,mode: str):
+        dexmod = (self.component.EntityProps.value["dexterity"] - 12) // 2
+        if mode == "ranged":
+            wepmod = (self.component.Equipped.value["ranged"].tohit_mod)
+        elif mode == "melee":
+            wepmod = (self.component.Equipped.value["melee"].tohit_mod)
+        return dexmod + wepmod
+    def get_base_to_dodge(self):
+        dexmod = (self.component.EntityProps.value["dexterity"] - 12) // 2
+        if mode == "ranged":
+            armmod = (self.component.Equipped.value["armor"].tododge_mod)
+        elif mode == "melee":
+            armmod = (self.component.Equipped.value["armor"].tododge_mod)
+        return dexmod + wepmod
+    def to_hit(self, other: 'BaseObject|BaseEntity',mode: str):
+        self_base_to_hit = self.get_base_to_hit(mode)
+        other_base_to_dodge = other.get_base_to_dodge(mode)
+        if self_base_to_hit >= other_base_to_dodge:
+            return True
+        else:
+            return False
+
+
+
     def _iter_contained_by(self):
         if self.contained_by is not None:
             yield self.contained_by
@@ -105,7 +129,7 @@ class BaseObject:
         return [_ for _ in self._iter_contained_by()]+[None]
 
     def add_component(self, *components):
-        self.component.__dict__.update({type(_c).__name__: _c for _c in components})
+        self.component.__dict__.update({_c.name if hasattr(_c,'name') else type(_c).__name__: _c for _c in components})
 
     def remove_component(self, component_name):
         try:
@@ -168,6 +192,15 @@ class BasicProps(BaseComponent):
     def __init__(self, **basic_properties):
         super().__init__()
         self.value = basic_properties
+
+class IsPlayer(BaseComponent):
+    def __init__(self):
+        super.__init__()
+
+class IsAI(BaseComponent):
+    def __init__(self,ai_style:str = "default"):
+        super.init()
+        self.ai_style = ai_style
 class BasicStats(BasicProps):
     def __init__(self, hp=10, weight=100):
         super().__init__(hp=hp, weight=weight)
