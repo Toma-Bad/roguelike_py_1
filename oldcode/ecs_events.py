@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import heapdict
 from bearlibterminal import terminal as blt
 from ecs_entity import *
-from scene import *
+from scene_object import *
 @dataclass
 class BaseEvent:
     player_entity: BaseEntity

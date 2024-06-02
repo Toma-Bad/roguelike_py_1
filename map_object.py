@@ -1,8 +1,9 @@
 from copy import copy
 import numpy as np
-from objects_components import tile_dt, BaseComponent, BaseObject
+from game_objects import BaseObject
 import bearlibterminal as blt
-
+from copy import copy
+from utils import *
 class TileMap:
     def __init__(self, width=128, height=128, layer=0):
 
