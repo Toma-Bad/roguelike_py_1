@@ -1,6 +1,7 @@
+from copy import copy
 import numpy as np
-from ecs_entity import *
-
+from objects_components import tile_dt, BaseComponent, BaseObject
+import bearlibterminal as blt
 
 class TileMap:
     def __init__(self, width=128, height=128, layer=0):
@@ -21,7 +22,7 @@ class TileMap:
             self.rem_obj(obj)
 
     def add_obj(self, obj: BaseObject):
-        self.np_array[obj.position]['gf_tile'] = obj.component.SpriteComponent.sprite
+        self.np_array[obj.position] = obj.components['tile'].tile
 
     def rem_obj(self, obj: BaseObject):
         self.np_array[obj.position] = 0
@@ -62,21 +63,21 @@ class MapRenderer:
 
     def render(self):
         for key in sorted(self.render_layers.keys()):
-            map_to_render = self.render_layers[key].np_array['gf_tile']
+            map_to_render = self.render_layers[key].np_array['sprite']
             darkmap = np.where(map_to_render['dark'] == True)
-            map_to_render['fg'][darkmap] = (map_to_render['gf_tile']['fg'][darkmap]
+            map_to_render['fg'][darkmap] = (map_to_render['sprite']['fg'][darkmap]
                                             // np.array([2, 1, 1, 1]))
-            map_to_render['bg'][darkmap] = (map_to_render['gf_tile']['bg'][darkmap]
+            map_to_render['bg'][darkmap] = (map_to_render['sprite']['bg'][darkmap]
                                             // np.array([2, 1, 1, 1]))
             unexmap = np.where(map_to_render['explored'] == False)
-            map_to_render['fg'][unexmap] = (map_to_render['gf_tile']['fg'][unexmap]
+            map_to_render['fg'][unexmap] = (map_to_render['sprite']['fg'][unexmap]
                                             * np.array([1, 0, 0, 0]))
-            map_to_render['bg'][unexmap] = (map_to_render['gf_tile']['bg'][unexmap]
+            map_to_render['bg'][unexmap] = (map_to_render['sprite']['bg'][unexmap]
                                             * np.array([1, 0, 0, 0]))
             blt.layer(key)
             blt.put_np_array(0,
                              0,
-                             self.render_layers[key].np_array['gf_tile'],
+                             self.render_layers[key].np_array['sprite'],
                              'ch',
                              'fg',
                              'bg')
