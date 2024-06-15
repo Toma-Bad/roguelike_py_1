@@ -15,7 +15,7 @@ gf_tile_dt = np.dtype([("ch", np.uint32),
                        ("bg", '4B')])
 
 tile_dt = np.dtype([("walkable", bool),
-                    ("transparent", bool),
+                    ('opaque', bool),
                     ("dark", bool),
                     ("explored", bool),
                     ("gf_tile", gf_tile_dt)])

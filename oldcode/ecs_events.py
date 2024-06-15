@@ -158,9 +158,10 @@ class Game:
         return None
 
     def calculate_melee_damage(self,entity:BaseEntity):
+        ...
 
 
-    def command_execute(self,command:BaseCommand|MoveCommand|MeleeAttackCommand|RangedAttackCommand|InterCommand):
+    def command_execute(self,command:BaseCommand|MoveCommand|MeleeAttackCommand|RangedAttackCommand):
         match(command):
             case MoveCommand():
                 return command.execute(self.current_scene)

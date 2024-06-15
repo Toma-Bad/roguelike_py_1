@@ -17,12 +17,12 @@ def gf_Tile(char, fgcolor, bgcolor):
 def gf_Tile3B(char,fgcolor,bgcolor):
     return np.array((ord(char), blt.color_from_argb(*fgcolor), blt.color_from_argb(*bgcolor)), dtype=gf_tile_dt)
 
-tile_dt = np.dtype([("walkable", bool), ("transparent", bool), ("dark", bool), ("explored", bool), ("gf_tile", gf_tile_dt)])
+tile_dt = np.dtype([("walkable", bool), ('opaque', bool), ("dark", bool), ("explored", bool), ("gf_tile", gf_tile_dt)])
 
-tile_dt_3B = np.dtype([("walkable", bool), ("transparent", bool), ("dark", bool), ("explored", bool), ("gf_tile", gf_tile_dt)])
+tile_dt_3B = np.dtype([("walkable", bool), ('opaque', bool), ("dark", bool), ("explored", bool), ("gf_tile", gf_tile_dt)])
 
-def Tile(walkable=True, transparent=True, dark=False, explored = True, gf_tile=None):
-    return np.array((walkable, transparent, dark, explored, gf_tile), dtype=tile_dt)
+def Tile(walkable=True, opaque=True, dark=False, explored = True, gf_tile=None):
+    return np.array((walkable, opaque, dark, explored, gf_tile), dtype=tile_dt)
 
-def Tile3B(walkable=True, transparent=True, dark=False, explored = True, gf_tile=None):
-    return np.array((walkable, transparent, dark, explored, gf_tile), dtype=tile_dt_3B)
+def Tile3B(walkable=True, opaque=True, dark=False, explored = True, gf_tile=None):
+    return np.array((walkable, opaque, dark, explored, gf_tile), dtype=tile_dt_3B)

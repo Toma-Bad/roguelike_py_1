@@ -1,5 +1,5 @@
 import numpy as np
-
+from bearlibterminal import terminal as blt
 
 sprite_dt = np.dtype(
     [
@@ -12,7 +12,7 @@ sprite_dt = np.dtype(
 tile_dt = np.dtype(
     [
         ("walkable", bool),
-        ("transparent", bool),
+        ('opaque', bool),
         ("dark", bool),
         ("explored", bool),
         ("sprite", sprite_dt)
@@ -23,32 +23,37 @@ def make_blt_sprite(**kwargs):
     char = kwargs.setdefault('char','X')
     fg_color = kwargs.setdefault('fg_color',[255,255,255,255])
     bg_color = kwargs.setdefault('bg_color', [255, 255, 255, 255])
-
-    try:
-        return np.array(
-            [(ord(char),
-            blt.color_from_argb(*fg_color),
-            blt.color_from_argb(*bg_color)),],
-            dtype=sprite_dt
-        )
-    except:
-        return np.array(
-            [(ord(char),
-            blt.color_from_name(fg_color),
-            blt.color_from_name(bg_color)),],
-            dtype=sprite_dt
-        )
+    if isinstance(char, str):
+        char = ord(char)
+    if isinstance(fg_color, np.uint32):
+        pass
+    elif isinstance(fg_color, str):
+        fg_color = blt.color_from_name(fg_color)
+    else:
+        fg_color = blt.color_from_argb(*fg_color)
+    if isinstance(bg_color, np.uint32):
+        pass
+    elif isinstance(bg_color, str):
+        bg_color = blt.color_from_name(bg_color)
+    else:
+        bg_color = blt.color_from_argb(*bg_color)
+    return np.array(
+        [(char,
+          fg_color,
+          bg_color), ],
+        dtype=sprite_dt
+    )[0]
 
 def make_blt_tile(**kwargs):
     walkable = kwargs.setdefault('walkable',True)
     dark = kwargs.setdefault('dark', True)
-    transparent = kwargs.setdefault('transparent', True)
+    opaque = kwargs.setdefault('opaque', True)
     explored = kwargs.setdefault('explored', True)
     sprite = kwargs.setdefault('sprite',make_blt_sprite())
     return np.array(
-        [(walkable, transparent, dark, explored,sprite),],
+        [(walkable, opaque, dark, explored,sprite),],
         dtype=tile_dt
-    )
+    )[0]
 
 
 

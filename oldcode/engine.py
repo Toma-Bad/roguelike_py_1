@@ -196,7 +196,7 @@ class Render:
         self.obj_list = obj_list
         self.entity_list = entity_list
     def compute_fov(self,position,radius = 9):
-        self.fov_map = tcodmap.compute_fov(self.SceneMap.WallMap.np_map["transparent"], pov=tuple(position), radius=radius,algorithm=tcod.constants.FOV_DIAMOND)
+        self.fov_map = tcodmap.compute_fov(self.SceneMap.WallMap.np_map['opaque'], pov=tuple(position), radius=radius,algorithm=tcod.constants.FOV_DIAMOND)
     @property
     def fov_map(self):
         return self._fov_map

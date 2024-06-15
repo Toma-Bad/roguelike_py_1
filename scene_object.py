@@ -1,9 +1,11 @@
 from utils import *
 from game_objects import BaseObject, BaseComponent, BaseBlock, BaseEntity, BaseItem
-from map_object import *
+from map_object import TileMap
 
 class Scene:
     def __init__(self, scene_width, scene_height):
+        self.scene_width = scene_width
+        self.scene_height = scene_height
         self.ids = dict()
         self.obj_positions = SetDict()
         self.obj_type = SetDict()
@@ -15,14 +17,12 @@ class Scene:
         self.block_map = TileMap(scene_width, scene_height, layer=1)
         self.item_map = TileMap(scene_width, scene_height, layer=2)
         self.entity_map = TileMap(scene_width, scene_height, layer=3)
-        self.map_renderer = MapRenderer(self.terrain_map,
-                                        self.block_map,
-                                        self.item_map,
-                                        self.entity_map)
+
     def update_block_map(self):
         self.block_map.set_set(self.obj_type['BaseBlock'])
     def update_item_map(self):
-        self.item_map.set_set(self.obj_type['BaseItem'])
+        if 'BaseItem' in self.obj_type:
+            self.item_map.set_set(self.obj_type['BaseItem'])
     def update_entity_map(self):
         self.entity_map.set_set(self.obj_type['BaseEntity'])
     def update_map(self):
@@ -95,11 +95,54 @@ class Scene:
                 self.obj_in_container.add(base_object.id, base_object.contained_by)
             else:
                 base_object.contained_by = None
-    def make_turn_order(self, turn_duration = None):
-        if turn_duration == None:
-            turn_duration == 100
+    def get_objs_at(self,position: (int,int)):
+        if position in self.obj_positions:
+            objs_at_pos = self.obj_positions[position]
+        else:
+            objs_at_pos = set()
+        return objs_at_pos
+    def is_blocking_at(self,position: (int,int)):
+        if objs_at_pos := self.get_objs_at(position):
+            if objs_at_pos.intersection(self.obj_type['BaseBlock']):
+                return True
+        return False
+
+    def filter_get_obj_at(self,position: (int,int), filter:str="entity"):
+        res = set()
+        if objs_at_pos := self.get_objs_at(position):
+            match(filter):
+                case "entity":
+                    res = objs_at_pos.intersection(self.obj_type[BaseEntity])
+                case "block":
+                    res = objs_at_pos.intersection(self.obj_type[BaseBlock])
+                case "item":
+                    res = objs_at_pos.intersection(self.obj_type[BaseItem])
+        return res
+    def make_turn_order(self, **kwargs):
+        turn_duration = kwargs.setdefault("turn_duration",None)
+        if turn_duration is None:
+            turn_duration = 100
+        print(f"make_Turn_order\n{turn_duration=},{self.obj_type['BaseEntity']=}")
         init_obj = np.array([(_o.components["move_points"]["value"],_o.id) for _o in self.obj_type['BaseEntity']],
                             dtype=[('move_points',np.int32),('obj_id',np.int64)])
-        to_move = init_obj[init_obj['move_points'] <= turn_duration].sort(order='move_points')
-        has_moved = init_obj[init_obj['move_points'] > turn_duration].sort(order='move_points')
+        print(f"{init_obj=}")
+        init_obj.sort(order='move_points')
+        to_move = init_obj[init_obj['move_points'] <= turn_duration]
+        has_moved = init_obj[init_obj['move_points'] > turn_duration]
+        print(f"{to_move=}")
         return to_move, has_moved
+
+    def get_turn(self, turn_duration = None):
+        to_move, has_moved = self.make_turn_order(turn_duration=turn_duration)
+        print(to_move, has_moved)
+        if to_move.size:
+            next_entity = self.ids[to_move['obj_id'][0]]
+        else:
+            next_entity = None
+        return next_entity, to_move, has_moved
+
+    def pass_turn(self, turn_duration=None):
+        if turn_duration is None:
+            turn_duration = 100
+        for _o in self.obj_type['BaseEntity']:
+            _o.components["move_points"]['value'] -= 100
