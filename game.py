@@ -1,5 +1,7 @@
 from map_renderer import MapRenderer
 import event_handler
+import json
+import jsonschema
 from event_handler import EventHandler
 from scene_object import Scene
 from map_object import *
@@ -13,13 +15,43 @@ move_dict = {
     "right":(1,0)
 }
 from scene_loader import generate_scene
+
+class Command(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class CommandFactory:
+    def __init__(self, schema_file: str = None):
+        with open(schema_file,'r') as fin:
+            schema_data = json.load(fin)
+
+    def create_command(self, event):
+        match (event):
+            case "up" | "down" | "left" | "right":
+                return
+            case _:
+                return None
+
+
+
+
+
+
 @dataclass
 class Command:
     entity: BaseEntity
 
-@dataclass
-class MoveCommand(Command):
-    direction: (int,int)
+#@dataclass
+#class MoveCommand(Command):
+#    direction: (int,int)
+
+class AttackCommand(Command):
+    def __init__(self, entity, other):
+        super().__init__(entity)
+        self.other = other
+
+
 
 @dataclass
 class Action:
