@@ -23,43 +23,65 @@ class Command(dict):
 
 class CommandFactory:
     def __init__(self, schema_file: str = None):
-        with open(schema_file,'r') as fin:
-            schema_data = json.load(fin)
+        self.schema_data = None
+        if schema_file:
+            with open(schema_file,'r') as fin:
+                self.schema_data = json.load(fin)
 
-    def create_command(self, event):
+    def move_command(self, direction):
+        command = {
+            "type": "move",
+            "direction": direction
+        }
+        return command
+
+    def attack_command(self, **attk_info):
+        command = {
+            "type": "attack"
+        }
+        command.update(attk_info)
+        return command
+
+    def interact_command(self, **interact_info):
+        command = {
+            "type": "interact"
+        }
+        command.update(**interact_info)
+        return command
+
+    def from_event(self, event):
         match (event):
-            case "up" | "down" | "left" | "right":
-                return
+            case "up":
+                return self.move_command((0,1))
+            case "down":
+                return self.move_command((0,-1))
+            case "left":
+                return self.move_command((-1,0))
+            case "right":
+                return self.move_command((1,0))
             case _:
                 return None
 
+    class ActionFactory:
+        def __init__(self):
+            ...
+        def create_move_action(self,target_entity, action_info):
+            return {"target_entity": target_entity, "action_info": action_info, "type": "moveAction"}
+        def create_attack_action(self,attacking_entity, attack_target, attack_info):
+            return {"attacking_entity": attacking_entity,
+                    "attack_target": attack_target,
+                    "attack_info": attack_info,
+                    "type": "attackAction"}
+        def create_inter_action(self, initiating_entity, interaction_target, interaction_info):
+            return {
+                "initiating_entity": initiating_entity,
+                "interaction_target": interaction_target,
+                "interaction_info": interaction_info,
+                "type": "interAction"
+            }
 
 
 
-
-
-@dataclass
-class Command:
-    entity: BaseEntity
-
-#@dataclass
-#class MoveCommand(Command):
-#    direction: (int,int)
-
-class AttackCommand(Command):
-    def __init__(self, entity, other):
-        super().__init__(entity)
-        self.other = other
-
-
-
-@dataclass
-class Action:
-    entity: BaseEntity
-
-@dataclass
-class MoveAction(Action):
-    destination: (int,int)
 
 
 class Game:
