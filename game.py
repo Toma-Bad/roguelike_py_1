@@ -30,21 +30,21 @@ class CommandFactory:
 
     def move_command(self, direction):
         command = {
-            "type": "move",
+            "type": "moveCommand",
             "direction": direction
         }
         return command
 
     def attack_command(self, **attk_info):
         command = {
-            "type": "attack"
+            "type": "attackCommand"
         }
         command.update(attk_info)
         return command
 
     def interact_command(self, **interact_info):
         command = {
-            "type": "interact"
+            "type": "interactionCommand"
         }
         command.update(**interact_info)
         return command
@@ -62,23 +62,35 @@ class CommandFactory:
             case _:
                 return None
 
-    class ActionFactory:
-        def __init__(self):
-            ...
-        def create_move_action(self,target_entity, action_info):
-            return {"target_entity": target_entity, "action_info": action_info, "type": "moveAction"}
-        def create_attack_action(self,attacking_entity, attack_target, attack_info):
-            return {"attacking_entity": attacking_entity,
-                    "attack_target": attack_target,
-                    "attack_info": attack_info,
-                    "type": "attackAction"}
-        def create_inter_action(self, initiating_entity, interaction_target, interaction_info):
-            return {
-                "initiating_entity": initiating_entity,
-                "interaction_target": interaction_target,
-                "interaction_info": interaction_info,
-                "type": "interAction"
-            }
+class ActionFactory:
+    def __init__(self):
+        ...
+    def create_move_action(self,target_entity, action_info):
+        return {"target_entity": target_entity, "action_info": action_info, "type": "moveAction"}
+    def create_attack_action(self,attacking_entity, attack_target, attack_info):
+        return {"attacking_entity": attacking_entity,
+                "attack_target": attack_target,
+                "attack_info": attack_info,
+                "type": "attackAction"}
+    def create_inter_action(self, initiating_entity, interaction_target, interaction_info):
+        return {
+            "initiating_entity": initiating_entity,
+            "interaction_target": interaction_target,
+            "interaction_info": interaction_info,
+            "type": "interactionAction"
+        }
+    def from_command(self, current_scene, player_entity, command):
+        match (command["type"]):
+            case "moveCommand":
+                new_destination = (player_entity.position[0] + command["direction"][0],
+                                   player_entity.position[1] + command["direction"][1])
+                if current_scene.is_blocking_at(new_destination):
+                    return None
+                else:
+                    return self.create_move_action(player_entity, {"position": new_destination})
+            case _:
+                return None
+
 
 
 
